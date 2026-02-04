@@ -262,10 +262,7 @@
                 const html = await pdfResp.text();
                 printWindow.document.write(html);
                 printWindow.document.close();
-                printWindow.focus();
-                setTimeout(() => {
-                  printWindow.print();
-                }, 1000);
+                // Print is triggered by the HTML's onload script
               }
             } catch (error) {
               console.error('PDF generation error:', error);
@@ -282,10 +279,7 @@
                   const html = await printResp.text();
                   printWindow.document.write(html);
                   printWindow.document.close();
-                  printWindow.focus();
-                  setTimeout(() => {
-                    printWindow.print();
-                  }, 1000);
+                  // Print is triggered by the HTML's onload script
                 } else {
                   alert('PDF generation failed. Please try using your browser\'s print function on the treatment plan above.');
                 }
@@ -387,10 +381,7 @@
               const html = await pdfResp.text();
               printWindow.document.write(html);
               printWindow.document.close();
-              printWindow.focus();
-              setTimeout(() => {
-                printWindow.print();
-              }, 1000);
+              // Print is triggered by the HTML's onload script
             }
           } catch (error) {
             console.error('PDF generation error:', error);
@@ -407,10 +398,7 @@
                 const html = await printResp.text();
                 printWindow.document.write(html);
                 printWindow.document.close();
-                printWindow.focus();
-                setTimeout(() => {
-                  printWindow.print();
-                }, 1000);
+                // Print is triggered by the HTML's onload script
               } else {
                 alert('PDF generation failed. Please try using your browser\'s print function on the treatment plan above.');
               }
