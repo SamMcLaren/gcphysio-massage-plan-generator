@@ -1,0 +1,436 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GC Physio Massage Plan Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root { --blue: #3A71DA; --orange: #FF7300; --bg: #F7FAFF; --text: #111827; --muted: #6B7280; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+      header { display:flex; gap:16px; align-items:center; padding: 20px 16px; background: linear-gradient(180deg, #EEF4FF 0%, #ffffff 100%); border-bottom: 1px solid #E5E7EB; }
+      header img { height: 48px; }
+      header h1 { margin: 0; color: var(--blue); font-size: 20px; }
+      main { max-width: 900px; margin: 24px auto; padding: 0 16px 40px; }
+      .card { background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); overflow: hidden; }
+
+      /* Extended width for edit mode */
+      .edit-mode { max-width: 1200px !important; }
+      .edit-mode main { max-width: 1200px !important; }
+      .card-header { padding: 16px; border-bottom: 1px solid #E5E7EB; display:flex; align-items:center; justify-content: space-between; }
+      .card-header h2 { font-size: 16px; color: var(--blue); margin:0; }
+      .card-body { padding: 16px; display:grid; gap:16px; }
+      .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .form-group { display: flex; flex-direction: column; gap: 6px; }
+      .form-group label { font-weight: 600; font-size: 14px; color: var(--text); }
+      input, select { padding: 10px 12px; font-size: 14px; border: 1px solid #D1D5DB; border-radius: 8px; outline: none; }
+      input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(58,113,218,0.15); }
+      .patient-info { color: var(--muted); font-size: 13px; margin-top: 4px; }
+      textarea { width: 100%; min-height: 180px; padding: 12px; font-size: 14px; border: 1px solid #D1D5DB; border-radius: 10px; outline: none; }
+      textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(58,113,218,0.15); }
+      .actions { display:flex; gap: 10px; flex-wrap: wrap; }
+      button { background: var(--blue); color: #fff; border: none; border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+      button:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+      button.secondary { background: var(--orange); }
+      button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+      /* Loading spinner */
+      .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid var(--blue);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .output { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #0b1220; color: #e2e8f0; padding: 16px; border-radius: 10px; overflow:auto; max-height: 360px; }
+      .preview { border-top: 1px solid #E5E7EB; padding: 16px; background: #FAFAFF; }
+      .edit-section { margin-top: 20px; padding: 20px; background: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 8px; }
+      .edit-section h3 { margin: 0 0 10px 0; color: #495057; font-size: 18px; }
+      .edit-note { margin: 0 0 15px 0; color: #6c757d; font-size: 14px; font-style: italic; }
+      .edit-textarea { width: 100%; min-height: 300px; padding: 15px; border: 1px solid #ced4da; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; resize: vertical; }
+      .edit-textarea:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
+
+      /* Side-by-side layout for edit mode */
+      .edit-mode .preview {
+        width: 49%;
+        float: left;
+        margin-right: 1%;
+        margin-top: 0;
+        min-height: 600px;
+        max-height: 800px;
+        overflow-y: auto;
+      }
+      .edit-mode .edit-section {
+        width: 49%;
+        float: right;
+        margin-top: 0;
+        min-height: 600px;
+        max-height: 800px;
+      }
+      .edit-mode .edit-textarea {
+        height: 100%;
+        min-height: 600px;
+        max-height: 800px;
+        overflow-y: auto;
+      }
+      .edit-mode::after {
+        content: '';
+        display: table;
+        clear: both;
+      }
+      .note { color: var(--muted); font-size: 12px; }
+
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="https://www.mygcphysio.com.au/wp-content/uploads/2024/09/GCPSH-Colour-500px.png" alt="Gold Coast Physio & Sports Health" />
+      <div>
+        <h1>Gold Coast Physio & Sports Health</h1>
+        <div class="note">Generate a patient-centered massage treatment plan from your case note</div>
+      </div>
+    </header>
+    <main>
+      <div class="card">
+        <div class="card-header">
+          <h2>Patient Information</h2>
+          <div class="note">Fill in patient details and paste case note below</div>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="patientName">Patient Name</label>
+              <input type="text" id="patientName" placeholder="Enter patient name" />
+            </div>
+            <div class="form-group">
+              <label for="therapistName">Massage Therapist</label>
+              <select id="therapistName">
+                <option value="">Select therapist...</option>
+                <option value="Amanda O'Dempsey">Amanda O'Dempsey</option>
+                <option value="Elle Badrak">Elle Badrak</option>
+                <option value="Frederic Impens">Frederic Impens</option>
+                <option value="Katie Harders">Katie Harders</option>
+                <option value="Nicole Grimshaw">Nicole Grimshaw</option>
+                <option value="Payton Windsor">Payton Windsor</option>
+                <option value="Sarah Allcock">Sarah Allcock</option>
+                <option value="Trent Ousby">Trent Ousby</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="caseNote">Case Note</label>
+            <textarea id="caseNote" placeholder="Paste case note here..."></textarea>
+          </div>
+          <div class="actions">
+            <button id="generateBtn">Generate Plan</button>
+            <button class="secondary" id="editBtn" style="display: none;">Edit Plan</button>
+            <button class="secondary" id="saveEditBtn" style="display: none;">Save Changes</button>
+            <button class="secondary" id="downloadPdfBtn" disabled>Download PDF</button>
+          </div>
+
+          <div id="output" class="output" style="display:none;"></div>
+        </div>
+        <div class="preview" id="preview" style="display:none;"></div>
+        <div class="edit-section" id="editSection" style="display:none;">
+          <h3>Edit Treatment Plan</h3>
+          <p class="edit-note">Make any changes to the AI-generated plan below, then click "Save Changes" to update the preview and PDF.</p>
+          <textarea id="editTextarea" class="edit-textarea" placeholder="Treatment plan text will appear here..."></textarea>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const outputEl = document.getElementById('output');
+      const previewEl = document.getElementById('preview');
+      const editSection = document.getElementById('editSection');
+      const editTextarea = document.getElementById('editTextarea');
+      const editBtn = document.getElementById('editBtn');
+      const saveEditBtn = document.getElementById('saveEditBtn');
+      const generateBtn = document.getElementById('generateBtn');
+      const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+
+      let currentPlanText = ''; // Store the current plan text for editing
+
+      function spinner(text) {
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<span class="loading-spinner"></span>' + (text || 'Generating...');
+      }
+      function clearSpinner() {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Generate Plan';
+      }
+
+      async function generatePlan() {
+        const patientName = document.getElementById('patientName').value.trim();
+        const therapistName = document.getElementById('therapistName').value;
+        const caseNote = document.getElementById('caseNote').value.trim();
+
+        if (!patientName) {
+          alert('Please enter a patient name.');
+          return;
+        }
+        if (!therapistName) {
+          alert('Please select a massage therapist.');
+          return;
+        }
+        if (!caseNote) {
+          alert('Please paste a case note first.');
+          return;
+        }
+
+        spinner('Generating...');
+        outputEl.style.display = 'none'; // Hide the output box
+        previewEl.style.display = 'none';
+        document.querySelector('main').classList.remove('edit-mode');
+
+        try {
+          const resp = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ caseNote, patientName, therapistName })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Generation failed');
+
+          const text = data.text || '';
+          currentPlanText = text; // Store for editing
+          outputEl.textContent = text;
+          previewEl.style.display = 'block';
+          previewEl.innerHTML = '';
+
+          // Ask server to render structured, styled HTML
+          try {
+            const r = await fetch('/api/render-html', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ planText: text, patientName, therapistName })
+            });
+            const html = await r.json();
+            if (r.ok && html && html.html) {
+              previewEl.innerHTML = html.html;
+            } else {
+              previewEl.textContent = text;
+            }
+          } catch (_) {
+            previewEl.textContent = text;
+          }
+
+          // Show edit button after plan is generated
+          editBtn.style.display = 'inline-block';
+          editBtn.textContent = 'Edit Treatment Plan';
+
+          downloadPdfBtn.disabled = false;
+          downloadPdfBtn.onclick = async () => {
+            try {
+              const pdfResp = await fetch('/api/pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ planText: text, patientName, therapistName })
+              });
+
+              if (!pdfResp.ok) {
+                throw new Error('PDF generation failed');
+              }
+
+              const contentType = pdfResp.headers.get('content-type');
+
+              if (contentType === 'application/pdf') {
+                // Server-side PDF generation succeeded
+                const blob = await pdfResp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const filename = patientName ? `massage-treatment-plan-${patientName.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}.pdf` : 'massage-treatment-plan.pdf';
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+              } else {
+                // Fallback to print view
+                const printWindow = window.open('', '_blank');
+                const html = await pdfResp.text();
+                printWindow.document.write(html);
+                printWindow.document.close();
+                printWindow.focus();
+                setTimeout(() => {
+                  printWindow.print();
+                }, 1000);
+              }
+            } catch (error) {
+              console.error('PDF generation error:', error);
+              // Fallback to print view
+              try {
+                const printResp = await fetch('/api/print', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ planText: text, patientName, therapistName })
+                });
+
+                if (printResp.ok) {
+                  const printWindow = window.open('', '_blank');
+                  const html = await printResp.text();
+                  printWindow.document.write(html);
+                  printWindow.document.close();
+                  printWindow.focus();
+                  setTimeout(() => {
+                    printWindow.print();
+                  }, 1000);
+                } else {
+                  alert('PDF generation failed. Please try using your browser\'s print function on the treatment plan above.');
+                }
+              } catch (printError) {
+                console.error('Print fallback error:', printError);
+                alert('PDF generation failed. Please try using your browser\'s print function on the treatment plan above.');
+              }
+            }
+          };
+        } catch (e) {
+          console.error('Generation error:', e);
+          outputEl.style.display = 'block';
+          outputEl.textContent = 'Error: ' + (e.message || 'Unknown error');
+          previewEl.style.display = 'none';
+          downloadPdfBtn.disabled = true;
+        } finally {
+          clearSpinner();
+        }
+      }
+
+      // Edit functionality
+      function editPlan() {
+        document.querySelector('main').classList.add('edit-mode');
+        editSection.style.display = 'block';
+        editTextarea.value = currentPlanText;
+        editBtn.style.display = 'none';
+        saveEditBtn.style.display = 'inline-block';
+      }
+
+      async function saveEdits() {
+        const editedText = editTextarea.value.trim();
+        if (!editedText) {
+          alert('Please enter some text to save.');
+          return;
+        }
+
+        currentPlanText = editedText;
+
+        // Update the preview with edited content
+        try {
+          const patientName = document.getElementById('patientName').value.trim();
+          const therapistName = document.getElementById('therapistName').value;
+
+          const r = await fetch('/api/render-html', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planText: editedText, patientName, therapistName })
+          });
+          const html = await r.json();
+          if (r.ok && html && html.html) {
+            previewEl.innerHTML = html.html;
+          } else {
+            previewEl.textContent = editedText;
+          }
+        } catch (e) {
+          console.error('Failed to render edited HTML:', e);
+          previewEl.textContent = editedText;
+        }
+
+        // Hide edit section and show edit button
+        editSection.style.display = 'none';
+        editBtn.style.display = 'inline-block';
+        saveEditBtn.style.display = 'none';
+
+        // Remove edit-mode class to restore normal layout
+        document.querySelector('main').classList.remove('edit-mode');
+
+        // Update PDF download to use edited text
+        downloadPdfBtn.onclick = async () => {
+          const patientName = document.getElementById('patientName').value.trim();
+          const therapistName = document.getElementById('therapistName').value;
+
+          try {
+            const pdfResp = await fetch('/api/pdf', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ planText: currentPlanText, patientName, therapistName })
+            });
+
+            if (!pdfResp.ok) {
+              throw new Error('PDF generation failed');
+            }
+
+            const contentType = pdfResp.headers.get('content-type');
+
+            if (contentType === 'application/pdf') {
+              // Server-side PDF generation succeeded
+              const blob = await pdfResp.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              const filename = patientName ? `massage-treatment-plan-${patientName.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}.pdf` : 'massage-treatment-plan.pdf';
+              a.download = filename;
+              a.click();
+              URL.revokeObjectURL(url);
+            } else {
+              // Fallback to print view
+              const printWindow = window.open('', '_blank');
+              const html = await pdfResp.text();
+              printWindow.document.write(html);
+              printWindow.document.close();
+              printWindow.focus();
+              setTimeout(() => {
+                printWindow.print();
+              }, 1000);
+            }
+          } catch (error) {
+            console.error('PDF generation error:', error);
+            // Fallback to print view
+            try {
+              const printResp = await fetch('/api/print', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ planText: currentPlanText, patientName, therapistName })
+              });
+
+              if (printResp.ok) {
+                const printWindow = window.open('', '_blank');
+                const html = await printResp.text();
+                printWindow.document.write(html);
+                printWindow.document.close();
+                printWindow.focus();
+                setTimeout(() => {
+                  printWindow.print();
+                }, 1000);
+              } else {
+                alert('PDF generation failed. Please try using your browser\'s print function on the treatment plan above.');
+              }
+            } catch (printError) {
+              console.error('Print fallback error:', printError);
+              alert('PDF generation failed. Please try using your browser\'s print function on the treatment plan above.');
+            }
+          }
+        };
+      }
+
+      // Event listeners
+      generateBtn.addEventListener('click', generatePlan);
+      editBtn.addEventListener('click', editPlan);
+      saveEditBtn.addEventListener('click', saveEdits);
+
+      // Initialize the page
+      document.addEventListener('DOMContentLoaded', () => {
+        // No models to load, so no call to loadModels()
+      });
+    </script>
+  </body>
+</html>
