@@ -1085,12 +1085,17 @@ app.post('/api/pdf', async (req, res) => {
           }
         </style>
         <script>
-          // Auto-print when page loads
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 1000);
-          };
+          // Auto-print when page loads (only once)
+          (function() {
+            var hasPrinted = false;
+            window.onload = function() {
+              if (hasPrinted) return;
+              hasPrinted = true;
+              setTimeout(function() {
+                window.print();
+              }, 1000);
+            };
+          })();
         </script>
         </head>`
       );
