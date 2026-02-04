@@ -353,12 +353,30 @@ function parsePlanText(planText) {
   const lines = (planText || '').split('\n');
   const sections = [];
   let current = null;
+  let orphanedLines = []; // Capture content before first section
 
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
     const match = line.match(/^\s*(\d)\.\s*(.+)$/);
 
     if (match) {
+      // Save orphaned lines as a special section if any exist (before first section)
+      if (orphanedLines.length > 0 && !current) {
+        // Only add orphaned section if there's meaningful content
+        const meaningfulLines = orphanedLines.filter(l => l.trim().length > 0);
+        if (meaningfulLines.length > 0) {
+          sections.push({
+            number: '0',
+            title: 'Additional Notes',
+            description: '',
+            lines: orphanedLines,
+            isOrphaned: true
+          });
+          console.log(`Created orphaned section with ${meaningfulLines.length} lines`);
+        }
+        orphanedLines = [];
+      }
+
       if (current) sections.push(current);
 
       // Split the matched content into title and description
@@ -393,7 +411,27 @@ function parsePlanText(planText) {
       continue;
     }
 
-    if (current) current.lines.push(line);
+    if (current) {
+      current.lines.push(line);
+    } else if (line.trim()) {
+      // Content before any section header - capture as orphaned
+      orphanedLines.push(line);
+    }
+  }
+
+  // Handle any remaining orphaned content at the end (if no sections were found)
+  if (orphanedLines.length > 0) {
+    const meaningfulLines = orphanedLines.filter(l => l.trim().length > 0);
+    if (meaningfulLines.length > 0) {
+      sections.push({
+        number: '0',
+        title: 'Additional Notes',
+        description: '',
+        lines: orphanedLines,
+        isOrphaned: true
+      });
+      console.log(`Created trailing orphaned section with ${meaningfulLines.length} lines`);
+    }
   }
 
   if (current) sections.push(current);
@@ -634,6 +672,31 @@ async function renderStructuredHtml(planText, patientName = '', therapistName = 
     const bullets = [];
 
     console.log(`Processing section ${sec.number}:`, sec.lines);
+
+    // Special handling for orphaned sections (content before section headers)
+    if (sec.isOrphaned) {
+      for (const l of sec.lines) {
+        if (/^\s*[-*•]\s+/.test(l)) {
+          bullets.push(`<li>${escapeHtml(l.replace(/^\s*[-*•]\s+/, ''))}</li>`);
+        } else if (l.trim().length > 0) {
+          if (bullets.length) {
+            items.push(`<ul>${bullets.join('')}</ul>`);
+            bullets.length = 0;
+          }
+          items.push(`<p>${escapeHtml(l)}</p>`);
+        }
+      }
+      if (bullets.length) items.push(`<ul>${bullets.join('')}</ul>`);
+
+      console.log(`Orphaned section items:`, items);
+
+      return `
+        <section class="section orphaned-section">
+          <h2>${escapeHtml(sec.title)}</h2>
+          ${items.join('\n')}
+        </section>
+      `;
+    }
 
     // Special handling for Treatment Plan (section 5)
     if (sec.number === '5' && sec.title.includes('Treatment Plan')) {
