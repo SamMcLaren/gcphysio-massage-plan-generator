@@ -349,6 +349,18 @@ function extractTextFromCandidate(candidate) {
   return fragments.join('\n').trim();
 }
 
+// Common intro phrases that AI generates - these should be filtered out
+const INTRO_PHRASE_PATTERNS = [
+  /^here\s*(is|'s)\s*(your)?\s*(personalized)?\s*(treatment|massage)?\s*plan:?$/i,
+  /^this\s+is\s+(your)?\s*(personalized)?\s*(treatment|massage)?\s*plan:?$/i,
+  /^(your)?\s*(personalized)?\s*(treatment|massage)?\s*plan:?$/i,
+];
+
+function isIntroPhrase(line) {
+  const trimmed = line.trim();
+  return INTRO_PHRASE_PATTERNS.some(pattern => pattern.test(trimmed));
+}
+
 function parsePlanText(planText) {
   const lines = (planText || '').split('\n');
   const sections = [];
@@ -362,14 +374,14 @@ function parsePlanText(planText) {
     if (match) {
       // Save orphaned lines as a special section if any exist (before first section)
       if (orphanedLines.length > 0 && !current) {
-        // Only add orphaned section if there's meaningful content
-        const meaningfulLines = orphanedLines.filter(l => l.trim().length > 0);
+        // Filter out common intro phrases and empty lines
+        const meaningfulLines = orphanedLines.filter(l => l.trim().length > 0 && !isIntroPhrase(l));
         if (meaningfulLines.length > 0) {
           sections.push({
             number: '0',
             title: 'Additional Notes',
             description: '',
-            lines: orphanedLines,
+            lines: meaningfulLines,
             isOrphaned: true
           });
           console.log(`Created orphaned section with ${meaningfulLines.length} lines`);
@@ -421,13 +433,14 @@ function parsePlanText(planText) {
 
   // Handle any remaining orphaned content at the end (if no sections were found)
   if (orphanedLines.length > 0) {
-    const meaningfulLines = orphanedLines.filter(l => l.trim().length > 0);
+    // Filter out common intro phrases and empty lines
+    const meaningfulLines = orphanedLines.filter(l => l.trim().length > 0 && !isIntroPhrase(l));
     if (meaningfulLines.length > 0) {
       sections.push({
         number: '0',
         title: 'Additional Notes',
         description: '',
-        lines: orphanedLines,
+        lines: meaningfulLines,
         isOrphaned: true
       });
       console.log(`Created trailing orphaned section with ${meaningfulLines.length} lines`);
