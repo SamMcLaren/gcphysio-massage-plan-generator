@@ -291,6 +291,7 @@ async function generateQRCodeDataURL(text) {
 
 function escapeHtml(text) {
   return text
+    .replace(/\*\*/g, '') // Strip markdown bold markers
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
@@ -351,9 +352,13 @@ function extractTextFromCandidate(candidate) {
 
 // Common intro phrases that AI generates - these should be filtered out
 const INTRO_PHRASE_PATTERNS = [
-  /^here\s*(is|'s)\s*(your)?\s*(personalized)?\s*(treatment|massage)?\s*plan:?$/i,
-  /^this\s+is\s+(your)?\s*(personalized)?\s*(treatment|massage)?\s*plan:?$/i,
-  /^(your)?\s*(personalized)?\s*(treatment|massage)?\s*plan:?$/i,
+  /^here\s*(is|'s)\s*(your)?\s*(personalized)?\s*(treatment|massage)?\s*(therapy)?\s*plan:?\.?$/i,
+  /^this\s+is\s+(your)?\s*(personalized)?\s*(treatment|massage)?\s*(therapy)?\s*plan:?\.?$/i,
+  /^(your)?\s*(personalized)?\s*(treatment|massage)?\s*(therapy)?\s*plan:?\.?$/i,
+  /^below\s+(is|are)\s+(your)?\s*(personalized)?\s*(treatment|massage)?\s*plan:?\.?$/i,
+  /^i('ve|'ve| have)\s+(created|prepared|developed)\s+(a|your)\s*(personalized)?\s*(treatment|massage)?\s*plan/i,
+  /^based\s+on\s+(your|the)\s+(case\s+note|assessment|session)/i,
+  /^here('s| is)\s+your\s+plan:?\.?$/i,
 ];
 
 function isIntroPhrase(line) {
