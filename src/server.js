@@ -63,22 +63,15 @@ const BASE_PROMPT = `From this case note: [CASE_NOTE]. Generate a massage therap
    [Second action - activity modification or stretching with micro-dose and frequency]
    [Third action - home techniques with micro-dose and frequency]
 
-5. Treatment Pathway (Phases): Use EXACTLY this format for each phase:
+5. Treatment Plan: Use EXACTLY this format with two phases:
 
-Initial ([Phase Name], [Duration]):
-* What we'll do: [Clinic activities] + [Home activities]
-* Progress gates: [Specific criteria to move to next phase]
-* Appointment cadence: [Frequency and number of sessions]
+**Getting You Comfortable** (Acute Phase, [Duration]):
+[Write 3-4 sentences: Start by identifying which specific objective findings from the assessment are contributing to the patient's main symptoms. Explain which massage techniques you'll use and how they address these findings. Connect this to one of their goals. End with what improvements they should notice and when.]
+Recommended: [X sessions per week]
 
-Rebuild ([Phase Name], [Duration]):
-* What we'll do: [Clinic activities] + [Home activities]
-* Progress gates: [Specific criteria to move to next phase]
-* Appointment cadence: [Frequency and number of sessions]
-
-Maintain ([Phase Name], [Duration]):
-* What we'll do: [Clinic activities] + [Home activities]
-* Progress gates: [Specific criteria to move to next phase]
-* Appointment cadence: [Frequency and number of sessions]
+**Keeping You at Your Best** (Maintenance Phase, Ongoing):
+[Write 3-4 sentences: Explain how regular massage therapy maintains their progress and prevents the problem from returning. Reference their lifestyle/work demands that create ongoing tissue stress. Emphasize the value of proactive care - catching tension before it becomes painful. End with a relatable benefit statement.]
+Recommended: [X sessions per month/weeks]
 
 6. How We'll Measure Progress: [Specific measures with improvement criteria]
 
@@ -88,7 +81,7 @@ Maintain ([Phase Name], [Duration]):
 
 8. Recommended Appointments: [Summary of appointment schedule]
 
-IMPORTANT: For sections 3, 4, and 7, write each point as a separate line without bullet points (*). Only use bullet points (*) for the Treatment Pathway section 5.`;
+IMPORTANT: For sections 3, 4, and 7, write each point as a separate line without bullet points (*). Do NOT use bullet points for section 5 - write it as flowing paragraphs with the "Recommended:" line on its own.`;
 
 app.post('/api/generate', async (req, res) => {
   try {
@@ -531,7 +524,7 @@ function renderKeyActionsSection(section) {
   `;
 }
 
-function renderTreatmentPathwayTable(section) {
+function renderTreatmentPlanSection(section) {
   const lines = section.lines;
   const phases = [];
   let currentPhase = null;
@@ -539,67 +532,38 @@ function renderTreatmentPathwayTable(section) {
   for (const line of lines) {
     const trimmedLine = line.trim();
 
-    // Check if this is a phase header (contains "Initial", "Rebuild", or "Maintain")
-    if (trimmedLine.includes('Initial') || trimmedLine.includes('Rebuild') || trimmedLine.includes('Maintain')) {
+    // Check if this is a phase header (contains "Getting You Comfortable" or "Keeping You at Your Best")
+    if (trimmedLine.includes('Getting You Comfortable') || trimmedLine.includes('Keeping You at Your Best')) {
       if (currentPhase) {
         phases.push(currentPhase);
       }
 
-      // Extract phase name and description
-      const phaseMatch = trimmedLine.match(/^(\w+)\s*\(([^)]+)\)/);
-      if (phaseMatch) {
+      // Extract phase title and duration info
+      // Format: **Getting You Comfortable** (Acute Phase, 2-4 weeks):
+      const headerMatch = trimmedLine.match(/\*?\*?([^*]+)\*?\*?\s*\(([^)]+)\)/);
+      if (headerMatch) {
         currentPhase = {
-          name: phaseMatch[1],
-          description: phaseMatch[2],
-          items: []
+          title: headerMatch[1].trim(),
+          subtitle: headerMatch[2].trim(),
+          content: [],
+          recommended: ''
         };
       } else {
         currentPhase = {
-          name: trimmedLine,
-          description: '',
-          items: []
+          title: trimmedLine.replace(/\*+/g, '').trim(),
+          subtitle: '',
+          content: [],
+          recommended: ''
         };
       }
-    } else if (currentPhase && trimmedLine.startsWith('*')) {
-      // This is a structured item (What we'll do, Progress gates, etc.)
-      const itemText = trimmedLine.substring(1).trim();
-
-      console.log(`Processing bullet point: "${itemText}"`);
-
-      // Look for the structured bullet points with the new format
-      const whatWeDoMatch = itemText.match(/What we'll do:\s*(.+)/i);
-      const progressMatch = itemText.match(/Progress gates:\s*(.+)/i);
-      const appointmentMatch = itemText.match(/Appointment cadence:\s*(.+)/i);
-
-      console.log(`What we'll do match:`, whatWeDoMatch);
-      console.log(`Progress match:`, progressMatch);
-      console.log(`Appointment match:`, appointmentMatch);
-
-      if (whatWeDoMatch) {
-        const content = whatWeDoMatch[1].trim();
-        console.log(`Adding What we'll do: "${content}"`);
-        currentPhase.items.push({
-          label: 'What we\'ll do',
-          content: content
-        });
-      }
-
-      if (progressMatch) {
-        const content = progressMatch[1].trim();
-        console.log(`Adding Progress gates: "${content}"`);
-        currentPhase.items.push({
-          label: 'Progress gates to move on',
-          content: content
-        });
-      }
-
-      if (appointmentMatch) {
-        const content = appointmentMatch[1].trim();
-        console.log(`Adding Appointment cadence: "${content}"`);
-        currentPhase.items.push({
-          label: 'Recommended appointment cadence',
-          content: content
-        });
+    } else if (currentPhase) {
+      // Check if this is a "Recommended:" line
+      const recommendedMatch = trimmedLine.match(/^Recommended:\s*(.+)/i);
+      if (recommendedMatch) {
+        currentPhase.recommended = recommendedMatch[1].trim();
+      } else if (trimmedLine.length > 0 && !trimmedLine.startsWith('**')) {
+        // Add to content (paragraph text)
+        currentPhase.content.push(trimmedLine);
       }
     }
   }
@@ -608,59 +572,38 @@ function renderTreatmentPathwayTable(section) {
     phases.push(currentPhase);
   }
 
-  // Build the table HTML
-  let tableHtml = `
-    <section class="section">
+  // Build the HTML for the two-phase narrative format
+  let html = `
+    <section class="section treatment-plan-section">
       <h2><span class="num">${section.number}.</span> ${escapeHtml(section.title)}</h2>
-      <table class="phase-table">
-        <thead>
-          <tr>
-            <th>Phase</th>
-            <th>What We'll Do</th>
-            <th>Progress Gates</th>
-            <th>Appointment Cadence</th>
-          </tr>
-        </thead>
-        <tbody>
   `;
 
   for (const phase of phases) {
-    console.log(`Processing phase: ${phase.name}`);
-    console.log(`Phase items:`, phase.items);
+    const contentText = phase.content.join(' ').trim();
 
-    // Debug: show all labels we're searching for
-    phase.items.forEach((item, index) => {
-      console.log(`Item ${index}: Label="${item.label}", Content="${item.content}"`);
-    });
-
-    const whatWeDo = phase.items.find(item => item.label.toLowerCase().includes('what we\'ll do'))?.content || '';
-    const progressGates = phase.items.find(item => item.label.toLowerCase().includes('progress gates'))?.content || '';
-    const appointmentCadence = phase.items.find(item => item.label.toLowerCase().includes('appointment cadence'))?.content || '';
-
-    console.log(`What we'll do: "${whatWeDo}"`);
-    console.log(`Progress gates: "${progressGates}"`);
-    console.log(`Appointment cadence: "${appointmentCadence}"`);
-
-    tableHtml += `
-      <tr>
-        <td>
-          <div class="phase-name">${phase.name}</div>
-          <div style="font-size: 12px; color: var(--muted);">${escapeHtml(phase.description)}</div>
-        </td>
-        <td class="content-cell">${escapeHtml(whatWeDo)}</td>
-        <td class="content-cell">${escapeHtml(progressGates)}</td>
-        <td class="content-cell">${escapeHtml(appointmentCadence)}</td>
-      </tr>
+    html += `
+      <div class="treatment-phase-card">
+        <div class="treatment-phase-header">
+          <span class="treatment-phase-title">${escapeHtml(phase.title)}</span>
+          ${phase.subtitle ? `<span class="treatment-phase-subtitle">(${escapeHtml(phase.subtitle)})</span>` : ''}
+        </div>
+        <div class="treatment-phase-content">
+          <p>${escapeHtml(contentText)}</p>
+        </div>
+        ${phase.recommended ? `
+        <div class="treatment-phase-recommended">
+          <strong>Recommended:</strong> ${escapeHtml(phase.recommended)}
+        </div>
+        ` : ''}
+      </div>
     `;
   }
 
-  tableHtml += `
-        </tbody>
-      </table>
+  html += `
     </section>
   `;
 
-  return tableHtml;
+  return html;
 }
 
 async function renderStructuredHtml(planText, patientName = '', therapistName = '') {
@@ -692,9 +635,9 @@ async function renderStructuredHtml(planText, patientName = '', therapistName = 
 
     console.log(`Processing section ${sec.number}:`, sec.lines);
 
-    // Special handling for Treatment Pathway (section 5)
-    if (sec.number === '5' && sec.title.includes('Treatment Pathway')) {
-      return `<div style="page-break-before: always; break-before: page;"></div>` + renderTreatmentPathwayTable(sec);
+    // Special handling for Treatment Plan (section 5)
+    if (sec.number === '5' && sec.title.includes('Treatment Plan')) {
+      return renderTreatmentPlanSection(sec);
     }
 
     // Special handling for Goals (section 3) - ensure bullet points
@@ -831,6 +774,24 @@ async function renderStructuredHtml(planText, patientName = '', therapistName = 
         .booking-link { color: #3A71DA !important; }
         .section ol li:before { color: #3A71DA !important; }
 
+        /* Treatment Plan Phase Cards print styles */
+        .treatment-phase-card {
+          background: #F8FAFC !important;
+          border-left: 4px solid #FF7300 !important;
+          -webkit-print-color-adjust: exact !important;
+        }
+        .treatment-phase-card:first-of-type {
+          border-left-color: #3A71DA !important;
+        }
+        .treatment-phase-title { color: #3A71DA !important; }
+        .treatment-phase-subtitle { color: #6B7280 !important; }
+        .treatment-phase-recommended {
+          background: rgba(58,113,218,0.08) !important;
+          color: #3A71DA !important;
+          -webkit-print-color-adjust: exact !important;
+        }
+        .treatment-phase-recommended strong { color: #FF7300 !important; }
+
         /* Ensure table borders are visible */
         .phase-table td {
           border-bottom: 1px solid #E5E7EB !important;
@@ -841,6 +802,17 @@ async function renderStructuredHtml(planText, patientName = '', therapistName = 
       }
       .phase-name { background: var(--orange); color: white; font-weight: 600; padding: 6px 10px; border-radius: 6px; display: inline-block; margin-bottom: 6px; font-size: 12px; }
       .phase-table .content-cell { max-width: 200px; word-wrap: break-word; }
+      /* Treatment Plan Phase Cards */
+      .treatment-plan-section { margin-bottom: 24px; }
+      .treatment-phase-card { background: #F8FAFC; border-radius: 12px; padding: 20px; margin: 16px 0; border-left: 4px solid var(--orange); }
+      .treatment-phase-card:first-of-type { border-left-color: var(--blue); }
+      .treatment-phase-header { margin-bottom: 12px; }
+      .treatment-phase-title { font-size: 16px; font-weight: 600; color: var(--blue); }
+      .treatment-phase-subtitle { font-size: 13px; color: var(--muted); margin-left: 8px; }
+      .treatment-phase-content { margin-bottom: 12px; }
+      .treatment-phase-content p { margin: 0; line-height: 1.6; font-size: 14px; color: var(--text); }
+      .treatment-phase-recommended { background: rgba(58,113,218,0.08); padding: 10px 14px; border-radius: 8px; font-size: 13px; color: var(--blue); }
+      .treatment-phase-recommended strong { color: var(--orange); }
       .badge { display: inline-block; background: rgba(58,113,218,0.08); color: var(--blue); border: 1px solid rgba(58,113,218,0.22); padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
       footer { padding: 18px 24px; font-size: 12px; color: var(--muted); border-top: 1px solid #E5E7EB; display:flex; justify-content: space-between; align-items:center; }
       .accent { color: var(--orange); }
