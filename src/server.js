@@ -49,9 +49,7 @@ const BASE_PROMPT = `From this case note: [CASE_NOTE]. Generate a massage therap
 
 1. Your Starting Point (Today): [2–3 sentences on pain levels, key aggravators, and what you can still do]
 
-2. What's Going On (Assessment Findings): Use EXACTLY this format:
-   * Clinical findings: [specific assessment findings]
-   * In plain English: [one sentence on what's happening and why symptoms behave as they do]
+2. What's Going On (Assessment Findings): [Write 1-2 sentences explaining what's happening in everyday language - why the symptoms behave as they do, what's causing the discomfort. DO NOT use medical jargon, individual muscle names, or clinical terminology. Use simple body area descriptions like "neck", "shoulder", "lower back" instead.]
 
 3. Where You Want to Get To (Goals): Write 3 separate goals, each as a complete sentence with success markers. Use this format:
    [First goal with success marker]
@@ -66,11 +64,11 @@ const BASE_PROMPT = `From this case note: [CASE_NOTE]. Generate a massage therap
 5. Treatment Plan: Use EXACTLY this format with two phases:
 
 **Getting You Comfortable** (Acute Phase, [Duration]):
-[Write 3-4 sentences: Start by identifying which specific objective findings from the assessment are contributing to the patient's main symptoms. Explain which massage techniques you'll use and how they address these findings. Connect this to one of their goals. End with what improvements they should notice and when.]
+[Write 3-4 sentences: Explain what areas we'll focus on and how massage will help relieve your symptoms. Connect this to one of their goals. End with what improvements they should notice and when. DO NOT use individual muscle names or medical jargon - use everyday language like "neck and shoulder area", "upper back", "tight spots".]
 Recommended: [X sessions per week]
 
 **Keeping You at Your Best** (Maintenance Phase, Ongoing):
-[Write 3-4 sentences: Explain how regular massage therapy maintains their progress and prevents the problem from returning. Reference their lifestyle/work demands that create ongoing tissue stress. Emphasize the value of proactive care - catching tension before it becomes painful. End with a relatable benefit statement.]
+[Write 3-4 sentences: Explain how regular massage therapy maintains their progress and prevents the problem from returning. Reference their lifestyle/work demands that create ongoing tension. Emphasize the value of proactive care - catching tension before it becomes painful. End with a relatable benefit statement. DO NOT use individual muscle names or medical jargon.]
 Recommended: [X sessions per month/weeks]
 
 6. How We'll Measure Progress: [Specific measures with improvement criteria]
@@ -81,7 +79,7 @@ Recommended: [X sessions per month/weeks]
 
 8. Recommended Appointments: [Summary of appointment schedule]
 
-IMPORTANT: For sections 3, 4, and 7, write each point as a separate line without bullet points (*). Do NOT use bullet points for section 5 - write it as flowing paragraphs with the "Recommended:" line on its own.`;
+IMPORTANT: For sections 3, 4, and 7, write each point as a separate line without bullet points (*). Do NOT use bullet points for section 5 - write it as flowing paragraphs with the "Recommended:" line on its own. CRITICAL: Avoid all medical jargon and individual muscle names throughout - use everyday language that any patient can understand.`;
 
 app.post('/api/generate', async (req, res) => {
   try {
