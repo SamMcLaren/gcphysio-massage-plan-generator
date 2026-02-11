@@ -475,7 +475,7 @@ function renderGoalsSection(section) {
 
     return `
       <section class="section">
-        <h2><span class="num">${section.number}.</span> ${escapeHtml(section.title)}</h2>
+        <h2>${escapeHtml(section.title)}</h2>
         <ul>${goalsHtml}</ul>
       </section>
     `;
@@ -510,7 +510,7 @@ function renderGoalsSection(section) {
 
   return `
     <section class="section">
-      <h2><span class="num">${section.number}.</span> ${escapeHtml(section.title)}</h2>
+      <h2>${escapeHtml(section.title)}</h2>
       <ul>${goalsHtml}</ul>
     </section>
   `;
@@ -537,7 +537,7 @@ function renderKeyActionsSection(section) {
 
     return `
       <section class="section">
-        <h2><span class="num">${section.number}.</span> ${escapeHtml(section.title)}</h2>
+        <h2>${escapeHtml(section.title)}</h2>
         <ol>${actionsHtml}</ol>
       </section>
     `;
@@ -572,7 +572,7 @@ function renderKeyActionsSection(section) {
 
   return `
     <section class="section">
-      <h2><span class="num">${section.number}.</span> ${escapeHtml(section.title)}</h2>
+      <h2>${escapeHtml(section.title)}</h2>
       <ol>${actionsHtml}</ol>
     </section>
   `;
@@ -629,7 +629,7 @@ function renderTreatmentPlanSection(section) {
   // Build the HTML for the two-phase narrative format
   let html = `
     <section class="section treatment-plan-section">
-      <h2><span class="num">${section.number}.</span> ${escapeHtml(section.title)}</h2>
+      <h2>${escapeHtml(section.title)}</h2>
   `;
 
   for (const phase of phases) {
@@ -746,7 +746,7 @@ async function renderStructuredHtml(planText, patientName = '', therapistName = 
 
     return `
       <section class="section">
-        <h2><span class="num">${sec.number}.</span> ${escapeHtml(sec.title)}</h2>
+        <h2>${escapeHtml(sec.title)}</h2>
         ${items.join('\n')}
       </section>
     `;
